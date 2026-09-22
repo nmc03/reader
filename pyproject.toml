@@ -1,0 +1,13 @@
+[project]
+name = "nmc-reader"
+version = "1.0.0"
+description = "Standalone text reader with Edge TTS"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "edge-tts>=7,<8",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
