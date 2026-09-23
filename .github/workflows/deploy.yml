@@ -1,0 +1,75 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: reader-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || vars.READER_AUTO_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Build release archive
+        run: |
+          git archive --format=tar.gz --output=/tmp/reader-release.tgz HEAD
+
+      - name: Upload release archive
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: /tmp/reader-release.tgz
+          target: /tmp/reader-deploy
+          strip_components: 1
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            set -eu
+            PROJECT_DIR="${{ secrets.VPS_PROJECT_PATH }}"
+            mkdir -p "$PROJECT_DIR"
+            tar -xzf /tmp/reader-deploy/reader-release.tgz -C "$PROJECT_DIR"
+            rm -rf /tmp/reader-deploy
+            cd "$PROJECT_DIR"
+
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+            mkdir -p data/audio
+
+            docker compose up -d --build --remove-orphans
+
+            for attempt in $(seq 1 36); do
+              status=$(docker inspect --format='{{.State.Health.Status}}' reader 2>/dev/null || true)
+              if [ "$status" = "healthy" ]; then
+                break
+              fi
+              if [ "$status" = "unhealthy" ] || [ "$attempt" = "36" ]; then
+                docker compose ps
+                docker compose logs --tail=150 reader
+                exit 1
+              fi
+              sleep 5
+            done
+
+            proxy_id=$(docker ps --filter network=frontend --format '{{.ID}} {{.Image}}' | awk 'tolower($2) ~ /nginx/ {print $1; exit}')
+            if [ -n "$proxy_id" ]; then
+              docker exec "$proxy_id" nginx -t
+              docker exec "$proxy_id" nginx -s reload
+            fi
+            docker image prune -f
