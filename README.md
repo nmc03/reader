@@ -7,7 +7,7 @@ Features:
 - Normal mode or client-side Sin referencias cleanup.
 - Browser SpeechSynthesis fallback.
 - Playback controls, speed and font-size settings.
-- Continuous server playback with smaller internal TTS parts, multi-part lookahead and double-buffered audio preloading.
+- Continuous server playback with sentence-safe TTS parts (850-character target; only unpunctuated text may be split), multi-part lookahead and double-buffered audio preloading.
 - TTS cache with automatic expiry.
 - No dependency on JW Reader or jw.org.
 
