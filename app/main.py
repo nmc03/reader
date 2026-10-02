@@ -10,7 +10,7 @@ from app import __version__, settings
 from app.models import TTSRequest, TTSResponse
 from app.tts import audio_service
 
-STATIC = Path("/app/static")
+STATIC = Path(__file__).resolve().parents[1] / "static"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -32,6 +32,11 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; "
+        "object-src 'none'; script-src 'self'; style-src 'self'; "
+        "connect-src 'self'; media-src 'self' blob:; img-src 'self' data:"
+    )
     if request.url.path in {"/", "/index.html", "/app.js", "/sw.js"}:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
@@ -62,6 +67,10 @@ async def audio(filename: str) -> FileResponse:
     path = settings.AUDIO_DIR / filename
     if not path.exists():
         raise HTTPException(status_code=404)
-    return FileResponse(path, media_type="audio/mpeg", filename=filename)
+    return FileResponse(
+        path,
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
