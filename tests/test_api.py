@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from app import settings
 from app.main import app
 
+
 def test_audio_is_content_addressed_and_immutable(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "AUDIO_DIR", tmp_path)
     key = "a" * 64
