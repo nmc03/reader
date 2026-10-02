@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: nmc-reader
+Version: 1.0.0
+Summary: Standalone text reader with Edge TTS
+Requires-Python: >=3.12
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: uvicorn<1,>=0.30
+Requires-Dist: edge-tts<8,>=7
+Provides-Extra: dev
+Requires-Dist: httpx<1,>=0.27; extra == "dev"
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: ruff<1,>=0.7; extra == "dev"
