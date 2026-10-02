@@ -50,9 +50,13 @@ jobs:
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
-            mkdir -p data/audio
 
-            docker compose up -d --build --remove-orphans
+            # Build first, then initialize the bind-mounted runtime data as the
+            # container's runtime UID. The host deploy user must not need write
+            # access inside ./data.
+            docker compose build reader
+            docker compose run --rm --no-deps --user 0:0 reader sh -c               'mkdir -p /data/audio && chown -R 10001:10001 /data'
+            docker compose up -d --no-build --remove-orphans
 
             for attempt in $(seq 1 36); do
               status=$(docker inspect --format='{{.State.Health.Status}}' reader 2>/dev/null || true)
