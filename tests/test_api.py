@@ -14,7 +14,8 @@ def test_audio_is_content_addressed_and_immutable(tmp_path, monkeypatch):
     assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
     assert response.headers["content-type"].startswith("audio/mpeg")
 
-def test_security_headers_include_csp():
+def test_security_headers_include_csp(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "AUDIO_DIR", tmp_path)
     with TestClient(app) as client:
         response = client.get("/")
     assert response.status_code == 200
